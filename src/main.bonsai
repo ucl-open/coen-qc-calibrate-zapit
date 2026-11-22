@@ -1,0 +1,476 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WorkflowBuilder Version="2.9.0"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xmlns:rx="clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core"
+                 xmlns:orc="clr-namespace:OpenRigs.Core;assembly=OpenRigs.Core"
+                 xmlns:orcl="clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control"
+                 xmlns:scr="clr-namespace:Bonsai.Scripting.Expressions;assembly=Bonsai.Scripting.Expressions"
+                 xmlns:io="clr-namespace:Bonsai.IO;assembly=Bonsai.System"
+                 xmlns:lv="clr-namespace:OpenRigs.LiveView;assembly=OpenRigs.LiveView"
+                 xmlns:cv="clr-namespace:Bonsai.Vision;assembly=Bonsai.Vision"
+                 xmlns:pyl="clr-namespace:Bonsai.Pylon;assembly=Bonsai.Pylon"
+                 xmlns:zap="clr-namespace:OpenRigs.Zapit;assembly=OpenRigs.Zapit"
+                 xmlns:zc="clr-namespace:CoenQcCalibrateZapit;assembly=Extensions"
+                 xmlns="https://bonsai-rx.org/2018/workflow">
+  <Description>The stable Zapit calibrations on a rig with Zapit (BLUE-OPTO-1 and BLUE-OPTO-2): the laser power curve, and the camera and optics set-up. It measures and drives only: app-rig-control computes every volts value (lib_zapit) and fits the curve. The scanner calibration is not here: it runs in every session workflow. Everything is a command (Point, Pattern, LaserOff, LaserCurve, Snapshot): a person aims the beam or checks the pattern with the live Zapit camera in view, or app-rig-control runs the laser staircase, the photodiode read on the AO clock and filed raw in the run's folder (calibration\runs\zapit-laser\&lt;run&gt;\Zapit-LaserCurve.csv); Snapshot saves the camera's frame as calibration\runs\&lt;text&gt;.png for a micronsPerPixel check. ZapitDaq (OpenRigs.Zapit) drives the NI DAQ with on-demand AO only: no trigger, no bank, never a trial. The laser is fired only with TestSubject (the lab's test mouse), at most LaserCeilingVolts, except the staircase, which covers the laser's range with the photodiode in the beam. The camera is stock PylonCapture with the calibration settings file (fixed exposure, free running), streamed to app-rig-control as Camera-Zapit. The Behavior board and its clock are the lab's pieces, as in every calibration; a calibration has no experiment folder (NoExperimentFolder). Ready once the board's time is read and the camera's first frame arrives.</Description>
+  <Workflow>
+    <Nodes>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="ConfigRoot" DisplayName="ConfigRoot" Description="The root under which each machine has its own configuration directory, &lt;ConfigRoot&gt;\&lt;RIG&gt;\rig.yml; calibration\ there holds the camera settings file and the runs." />
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ReadLabRig.bonsai">
+        <Description>This machine's rig.yml (ConfigRoot\&lt;RIG&gt;\rig.yml) read once into the lab rig model: RigConfigs, RigFile and ConfigRoot, which every device piece reads. First, before anything that reads them.</Description>
+        <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:NoExperimentFolder.bonsai">
+      </Expression>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="SubjectId" />
+        <Property Name="SessionId" />
+        <Property Name="LaunchId" Description="The launcher's run id; the launch's own, from app-rig-control." />
+      </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Initialization</Name>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561, which the rig agent relays. Its commands are the calibration's: Point, Pattern, LaserOff and LaserCurve are handled by ZapitRequests, Snapshot by the Snapshots group. Reports Recording at Go.</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="ExternalizedMapping">
+              <Property Name="SubjectId" />
+              <Property Name="SessionId" />
+              <Property Name="LaunchId" />
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:ExperimentControl.bonsai">
+              <SubjectId />
+              <SessionId />
+              <LaunchId />
+              <ControlEndpoint>@tcp://127.0.0.1:5561</ControlEndpoint>
+              <Parameters />
+              <Commands>
+                <Command>
+                  <Name>Point</Name>
+                  <Description>Holds the beam at a point (point mode, zap site). Text: galvo X volts, galvo Y volts, the laser's control volts and optionally a hold in ms, after which every line goes to 0 V, such as 0.5 -0.3 0.8 2000. A laser above 0 V needs the test subject and at most the ceiling.</Description>
+                </Command>
+                <Command>
+                  <Name>Pattern</Name>
+                  <Description>Walks the beam through a check pattern, each point for the dwell, then every line to 0 V. Text: the dwell in ms, then x y laser for each point, all separated by semicolons, such as 500;-1 -1 0;1 -1 0;1 1 0;-1 1 0.</Description>
+                </Command>
+                <Command>
+                  <Name>LaserOff</Name>
+                  <Description>Stops a pattern or a hold and writes 0 V on every line.</Description>
+                </Command>
+                <Command>
+                  <Name>LaserCurve</Name>
+                  <Description>Test subject only. Runs the laser staircase: the control volts in the run folder's staircase_volts.csv, each held for SamplesPerLevel, the photodiode read on the AO clock and filed beside it as Zapit-LaserCurve.csv, then Finished. Text: the run's folder under calibration\runs (zapit-laser\&lt;run&gt;) and optionally the galvos' X and Y volts to park at.</Description>
+                </Command>
+                <Command>
+                  <Name>Snapshot</Name>
+                  <Description>Saves the Zapit camera's latest frame, lossless, as calibration\runs\&lt;text&gt;.png beside rig.yml, such as zapit-optics\&lt;run&gt;\scale-1. The scale (micronsPerPixel) is checked on it.</Description>
+                </Command>
+              </Commands>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>ExperimentGo</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ReportPhase">
+                <orcl:Phase>Recording</orcl:Phase>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Description>Ends headless Bonsai when it is still running 2 s after the controller's stop: the live view's publisher threads keep the process alive until every device's teardown reaches them, so one held up would keep Bonsai running until the agent's kill; exit code 1 after any other end. Nothing in the editor.</Description>
+              <Combinator xsi:type="orcl:EndAfterStop">
+                <orcl:GraceSeconds>2</orcl:GraceSeconds>
+              </Combinator>
+            </Expression>
+          </Nodes>
+          <Edges>
+            <Edge From="0" To="1" Label="Source1" />
+            <Edge From="2" To="3" Label="Source1" />
+          </Edges>
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Hardware</Name>
+        <Description>The lab's device pieces, as in a session (lib-open-rigs building-blocks): the Ready gate (ReadyGate), the behavior board BehaviorBoard-Main on rig.yml's port (BehaviorBoard, which clears any ZapitTrigger line however the workflow stops) and its time, read and never set (ClockFromBoard, SetClock false). Ready once the board's time is read (HarpClockRead) and the Zapit camera's first frame has arrived (CalibrationReady, this workflow's own stage, announced by Camera-Zapit, ReadyGate's WorkflowStages). The NI DAQ is ZapitDaq, in Calibration.</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ReadyGate.bonsai">
+              <PieceStages>HarpClockRead</PieceStages>
+              <WorkflowStages>CalibrationReady</WorkflowStages>
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.bonsai">
+              <Name>BehaviorBoard-Main</Name>
+              <CommandsSubjectName>BehaviorBoard-Main.Commands</CommandsSubjectName>
+              <DataSubjectName>BehaviorBoard-Main.Data</DataSubjectName>
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ClockFromBoard.bonsai">
+              <Board>BehaviorBoard-Main</Board>
+              <SetClock>false</SetClock>
+              <BoardDataSubjectName>BehaviorBoard-Main.Data</BoardDataSubjectName>
+              <BoardCommandsSubjectName>BehaviorBoard-Main.Commands</BoardCommandsSubjectName>
+            </Expression>
+          </Nodes>
+          <Edges />
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="SerialNumber" DisplayName="SerialNumber" Description="The Zapit Basler camera's serial number (rig.yml's zapit.camera.serialNumber). Blank opens the first Basler camera." />
+        <Property Name="CalibrationPfs" DisplayName="CalibrationPfs" Description="The camera's calibration settings file (fixed exposure, free running), relative to rig.yml's folder (rig.yml's zapit.camera.calibrationPfsPath). The workflow stops at Start naming it when it is missing." />
+      </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Camera-Zapit</Name>
+        <Description>The Zapit camera: stock Bonsai.Pylon PylonCapture opened with the calibration settings file (ZapitCameraSettings finds it beside rig.yml), its frames on the BehaviorSubject Camera-Zapit.Data, which the live view streams as Camera-Zapit.video and Snapshot saves from. Nothing is recorded from it. Announces CalibrationReady at the first frame (a camera sending none never gets to Ready).</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="ExternalizedMapping">
+              <Property Name="SerialNumber" />
+              <Property Name="CalibrationPfs" />
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>RigFile</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="io:GetDirectoryName" />
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="zc:ZapitCameraSettings">
+                <zc:SerialNumber />
+                <zc:CalibrationPfs>calibration/Zapit-Calibration.pfs</zc:CalibrationPfs>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="PropertyMapping">
+              <PropertyMappings>
+                <Property Name="SerialNumber" Selector="SerialNumber" />
+                <Property Name="ParameterFile" Selector="ParameterFile" />
+              </PropertyMappings>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="pyl:PylonCapture" />
+            </Expression>
+            <Expression xsi:type="rx:BehaviorSubject">
+              <Name>Camera-Zapit.Data</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>Camera-Zapit.Data</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Take">
+                <rx:Count>1</rx:Count>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orc:AnnounceStage">
+                <orc:Stage>CalibrationReady</orc:Stage>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="MulticastSubject">
+              <Name>ReadyStages</Name>
+            </Expression>
+          </Nodes>
+          <Edges>
+            <Edge From="1" To="2" Label="Source1" />
+            <Edge From="2" To="3" Label="Source1" />
+            <Edge From="0" To="3" Label="Source2" />
+            <Edge From="3" To="4" Label="Source1" />
+            <Edge From="4" To="5" Label="Source1" />
+            <Edge From="5" To="6" Label="Source1" />
+            <Edge From="7" To="8" Label="Source1" />
+            <Edge From="8" To="9" Label="Source1" />
+            <Edge From="9" To="10" Label="Source1" />
+          </Edges>
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="Simulated" DisplayName="Simulated" Description="Run ZapitDaq's simulated twin instead of the NI DAQ (a desk, a test). Off on a rig." />
+        <Property Name="Device" DisplayName="Device" Description="The NI device as NI MAX names it (rig.yml's zapit.device), such as Dev1." />
+        <Property Name="GalvoXChannel" DisplayName="GalvoXChannel" Description="The AO line driving the X galvo (rig.yml's zapit.galvoXChannel), such as ao0." />
+        <Property Name="GalvoYChannel" DisplayName="GalvoYChannel" Description="The AO line driving the Y galvo (zapit.galvoYChannel)." />
+        <Property Name="LaserChannel" DisplayName="LaserChannel" Description="The AO line driving the laser's control (zapit.laserChannel)." />
+        <Property Name="LedChannel" DisplayName="LedChannel" Description="The AO line driving the masking LED (zapit.ledChannel)." />
+        <Property Name="PhotodiodeChannel" DisplayName="PhotodiodeChannel" Description="The AI line the photodiode is on (zapit.photodiodeChannel), such as ai0." />
+        <Property Name="PhotodiodeTerminal" DisplayName="PhotodiodeTerminal" Description="How the photodiode is wired: Rse, Nrse or Differential." />
+        <Property Name="SampleRate" DisplayName="SampleRate" Description="The AO sample rate, in samples per second (zapit.sampleRate)." />
+        <Property Name="MaxTrialSeconds" DisplayName="MaxTrialSeconds" Description="zapit.maxTrialSeconds: ZapitDaq needs it above 0; a calibration does not use it." />
+        <Property Name="EarlyStopLeadSeconds" DisplayName="EarlyStopLeadSeconds" Description="zapit.earlyStopLeadSeconds: ZapitDaq needs it above 0; a calibration does not use it." />
+        <Property Name="TestSubject" DisplayName="TestSubject" Description="True only when the subject is the lab's test mouse: without it no laser above 0 V is fired and LaserCurve is refused. app-rig-control sets it." />
+        <Property Name="LaserCeilingVolts" DisplayName="LaserCeilingVolts" Description="The most laser control volts Point and Pattern may use: the rig's ceilingMw as volts through the laser curve (lib_zapit). 0 refuses every laser." />
+        <Property Name="SamplesPerLevel" DisplayName="SamplesPerLevel" Description="The photodiode samples read at each step of the laser curve (1000 is 10 ms at 100 kS/s)." />
+      </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Calibration</Name>
+        <Description>The calibration commands. ZapitRequests turns Point, Pattern, LaserOff and LaserCurve into ZapitDaq commands (what it refuses is reported as the refused metric, never an error), ZapitDaq drives the NI DAQ from the rig's wiring (ZapitWiring) with on-demand AO, and each event it reports is the daq metric. A LaserCurve's StaircaseRead, the photodiode's samples one per AO sample, is filed raw in the run's folder (SaveLaserCurve, as the curve metric: steps and samples) and reports Finished; app-rig-control fits it. No fit and no volts maths here.</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>RigFile</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="io:GetDirectoryName" />
+            </Expression>
+            <Expression xsi:type="Format">
+              <Format>{0}\calibration\runs</Format>
+            </Expression>
+            <Expression xsi:type="PropertyMapping">
+              <PropertyMappings>
+                <Property Name="RunsFolder" />
+              </PropertyMappings>
+            </Expression>
+            <Expression xsi:type="ExternalizedMapping">
+              <Property Name="TestSubject" />
+              <Property Name="LaserCeilingVolts" />
+              <Property Name="SamplesPerLevel" />
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>ControlEvents</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="zc:ZapitRequests">
+                <zc:RunsFolder>UNMAPPED</zc:RunsFolder>
+                <zc:TestSubject>false</zc:TestSubject>
+                <zc:LaserCeilingVolts>0</zc:LaserCeilingVolts>
+                <zc:SamplesPerLevel>1000</zc:SamplesPerLevel>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="scr:ExpressionCondition">
+              <scr:Expression>Refusal == null</scr:Expression>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>Command</Selector>
+            </Expression>
+            <Expression xsi:type="scr:ExpressionCondition">
+              <scr:Expression>Refusal != null</scr:Expression>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>Refusal</Selector>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ReportMetric">
+                <orcl:Name>refused</orcl:Name>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="scr:ExpressionCondition">
+              <scr:Expression>Folder != null</scr:Expression>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>Folder</Selector>
+            </Expression>
+            <Expression xsi:type="rx:BehaviorSubject">
+              <Name>LaserCurveFolder</Name>
+            </Expression>
+            <Expression xsi:type="ExternalizedMapping">
+              <Property Name="Simulated" />
+              <Property Name="Device" />
+              <Property Name="GalvoXChannel" />
+              <Property Name="GalvoYChannel" />
+              <Property Name="LaserChannel" />
+              <Property Name="LedChannel" />
+              <Property Name="PhotodiodeChannel" />
+              <Property Name="PhotodiodeTerminal" />
+              <Property Name="SampleRate" />
+              <Property Name="MaxTrialSeconds" />
+              <Property Name="EarlyStopLeadSeconds" />
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="zc:ZapitWiring">
+                <zc:Simulated>false</zc:Simulated>
+                <zc:Device />
+                <zc:GalvoXChannel />
+                <zc:GalvoYChannel />
+                <zc:LaserChannel />
+                <zc:LedChannel />
+                <zc:PhotodiodeChannel />
+                <zc:PhotodiodeTerminal>Rse</zc:PhotodiodeTerminal>
+                <zc:SampleRate>100000</zc:SampleRate>
+                <zc:MaxTrialSeconds>3</zc:MaxTrialSeconds>
+                <zc:EarlyStopLeadSeconds>0.05</zc:EarlyStopLeadSeconds>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="PropertyMapping">
+              <PropertyMappings>
+                <Property Name="Simulated" Selector="Simulated" />
+                <Property Name="GalvoXChannel" Selector="GalvoXChannel" />
+                <Property Name="GalvoYChannel" Selector="GalvoYChannel" />
+                <Property Name="LaserChannel" Selector="LaserChannel" />
+                <Property Name="LedChannel" Selector="LedChannel" />
+                <Property Name="PhotodiodeChannel" Selector="PhotodiodeChannel" />
+                <Property Name="PhotodiodeTerminal" Selector="PhotodiodeTerminal" />
+                <Property Name="SampleRate" Selector="SampleRate" />
+                <Property Name="MaxTrialSeconds" Selector="MaxTrialSeconds" />
+                <Property Name="EarlyStopLeadSeconds" Selector="EarlyStopLeadSeconds" />
+              </PropertyMappings>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Description>The rig's NI DAQ, on-demand AO and the staircase only (OpenRigs.Zapit ZapitDaq): every line is zeroed on start and on stop, however the workflow ends, and any DAQ error stops the workflow.</Description>
+              <Combinator xsi:type="zap:ZapitDaq">
+                <zap:Simulated>false</zap:Simulated>
+                <zap:GalvoXChannel />
+                <zap:GalvoYChannel />
+                <zap:LaserChannel />
+                <zap:LedChannel />
+                <zap:PhotodiodeChannel />
+                <zap:PhotodiodeTerminal>Rse</zap:PhotodiodeTerminal>
+                <zap:TriggerTerminal />
+                <zap:SampleRate>100000</zap:SampleRate>
+                <zap:MaxTrialSeconds>3</zap:MaxTrialSeconds>
+                <zap:EarlyStopLeadSeconds>0.05</zap:EarlyStopLeadSeconds>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>Kind</Selector>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ReportMetric">
+                <orcl:Name>daq</orcl:Name>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="scr:ExpressionCondition">
+              <scr:Expression>Kind.ToString() == "StaircaseRead"</scr:Expression>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>LaserCurveFolder</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:WithLatestFrom" />
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="zc:SaveLaserCurve" />
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ReportMetric">
+                <orcl:Name>curve</orcl:Name>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ReportPhase">
+                <orcl:Phase>Finished</orcl:Phase>
+              </Combinator>
+            </Expression>
+          </Nodes>
+          <Edges>
+            <Edge From="0" To="1" Label="Source1" />
+            <Edge From="1" To="2" Label="Source1" />
+            <Edge From="2" To="3" Label="Source1" />
+            <Edge From="5" To="6" Label="Source1" />
+            <Edge From="3" To="6" Label="Source2" />
+            <Edge From="4" To="6" Label="Source3" />
+            <Edge From="6" To="7" Label="Source1" />
+            <Edge From="7" To="8" Label="Source1" />
+            <Edge From="6" To="9" Label="Source1" />
+            <Edge From="9" To="10" Label="Source1" />
+            <Edge From="10" To="11" Label="Source1" />
+            <Edge From="6" To="12" Label="Source1" />
+            <Edge From="12" To="13" Label="Source1" />
+            <Edge From="13" To="14" Label="Source1" />
+            <Edge From="15" To="16" Label="Source1" />
+            <Edge From="16" To="17" Label="Source1" />
+            <Edge From="8" To="18" Label="Source1" />
+            <Edge From="17" To="18" Label="Source2" />
+            <Edge From="18" To="19" Label="Source1" />
+            <Edge From="19" To="20" Label="Source1" />
+            <Edge From="18" To="21" Label="Source1" />
+            <Edge From="21" To="23" Label="Source1" />
+            <Edge From="22" To="23" Label="Source2" />
+            <Edge From="23" To="24" Label="Source1" />
+            <Edge From="24" To="25" Label="Source1" />
+            <Edge From="25" To="26" Label="Source1" />
+          </Edges>
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Snapshots</Name>
+        <Description>Each Snapshot command saves the Zapit camera's latest frame (Camera-Zapit.Data), lossless, as calibration\runs\&lt;the command's text&gt;.png beside rig.yml, the folder made if need be (SaveImage). The camera set-up's scale check (micronsPerPixel) reads it. A Snapshot before the camera's first frame saves nothing. Before LiveView, which must stay the last node: it streams only subjects built before it.</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>ControlEvents</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:OnCommand">
+                <orcl:Name>Snapshot</orcl:Name>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>RigFile</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="io:GetDirectoryName" />
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:WithLatestFrom" />
+            </Expression>
+            <Expression xsi:type="Format">
+              <Format>{1}\calibration\runs\{0}.png</Format>
+              <Selector>Item1,Item2</Selector>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>Camera-Zapit.Data</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:WithLatestFrom" />
+            </Expression>
+            <Expression xsi:type="rx:SelectMany">
+              <Name>SaveStill</Name>
+              <Description>The frame saved to the path: the path mapped onto SaveImage's FileName before the frame's image reaches it.</Description>
+              <Workflow>
+                <Nodes>
+                  <Expression xsi:type="WorkflowInput">
+                    <Name>Source1</Name>
+                  </Expression>
+                  <Expression xsi:type="MemberSelector">
+                    <Selector>Item1</Selector>
+                  </Expression>
+                  <Expression xsi:type="PropertyMapping">
+                    <PropertyMappings>
+                      <Property Name="FileName" />
+                    </PropertyMappings>
+                  </Expression>
+                  <Expression xsi:type="MemberSelector">
+                    <Selector>Item2.Image</Selector>
+                  </Expression>
+                  <Expression xsi:type="Combinator">
+                    <Combinator xsi:type="cv:SaveImage">
+                      <cv:FileName>snapshot.png</cv:FileName>
+                      <cv:Suffix>None</cv:Suffix>
+                    </Combinator>
+                  </Expression>
+                  <Expression xsi:type="WorkflowOutput" />
+                </Nodes>
+                <Edges>
+                  <Edge From="0" To="1" Label="Source1" />
+                  <Edge From="1" To="2" Label="Source1" />
+                  <Edge From="0" To="3" Label="Source1" />
+                  <Edge From="3" To="4" Label="Source1" />
+                  <Edge From="2" To="4" Label="Source2" />
+                  <Edge From="4" To="5" Label="Source1" />
+                </Edges>
+              </Workflow>
+            </Expression>
+          </Nodes>
+          <Edges>
+            <Edge From="0" To="1" Label="Source1" />
+            <Edge From="1" To="4" Label="Source1" />
+            <Edge From="3" To="4" Label="Source2" />
+            <Edge From="4" To="5" Label="Source1" />
+            <Edge From="5" To="7" Label="Source1" />
+            <Edge From="6" To="7" Label="Source2" />
+            <Edge From="7" To="8" Label="Source1" />
+            <Edge From="2" To="3" Label="Source1" />
+          </Edges>
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="lv:StreamDevices">
+        <Name>LiveView</Name>
+        <Description>Streams the devices in this machine's rig.yml that the workflow publishes, over ZeroMQ, for app-rig-control's Calibrations page: data on TCP 5556, video on 5558, as in every lab workflow. Camera-Zapit.Data is streamed as Camera-Zapit.video once StreamDevices knows the device (a rig.yml camera entry, or a temporary Zapit instance in OpenRigs.LiveView as the balance camera has). Last, with nothing feeding it: it finds only subjects built before it.</Description>
+        <lv:ConfigRoot>C:\Coen-Lab-Local\RigConfigs</lv:ConfigRoot>
+        <lv:DataPort>5556</lv:DataPort>
+        <lv:VideoPort>5558</lv:VideoPort>
+      </Expression>
+    </Nodes>
+    <Edges>
+      <Edge From="0" To="1" Label="Source1" />
+      <Edge From="3" To="4" Label="Source1" />
+      <Edge From="6" To="7" Label="Source1" />
+      <Edge From="8" To="9" Label="Source1" />
+    </Edges>
+  </Workflow>
+</WorkflowBuilder>
