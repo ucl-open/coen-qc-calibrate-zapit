@@ -263,6 +263,7 @@
                 <Property Name="MaxTrialSeconds" Selector="Zapit.MaxTrialSeconds" />
                 <Property Name="EarlyStopLeadSeconds" Selector="Zapit.EarlyStopLeadSeconds" />
                 <Property Name="CeilingMw" Selector="Zapit.LaserCeilingMw" />
+                <Property Name="LaserMaxVolts" Selector="Zapit.LaserMaxControlVolts" />
               </PropertyMappings>
             </Expression>
             <Expression xsi:type="ExternalizedMapping">
@@ -283,6 +284,7 @@
                 <zap:MaxTrialSeconds>3</zap:MaxTrialSeconds>
                 <zap:EarlyStopLeadSeconds>0.05</zap:EarlyStopLeadSeconds>
                 <zap:CeilingMw>0</zap:CeilingMw>
+                <zap:LaserMaxVolts>0</zap:LaserMaxVolts>
               </Combinator>
             </Expression>
             <Expression xsi:type="MemberSelector">

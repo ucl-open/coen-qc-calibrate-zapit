@@ -117,3 +117,6 @@ def test_the_dac_takes_the_rig_s_laser_ceiling(wf):
     # ZapitDaq's hard layer: rig.yml's zapit.ceilingMw (0 disables the laser); a lost mapping leaves 0, never no ceiling.
     assert 'Name="CeilingMw" Selector="Zapit.LaserCeilingMw"' in wf.text
     assert "<zap:CeilingMw>0</zap:CeilingMw>" in wf.text
+    # ... and refuses laser volts above rig.yml's laserMinMaxControlVolts[1] or below 0 V; a lost mapping leaves 0.
+    assert 'Name="LaserMaxVolts" Selector="Zapit.LaserMaxControlVolts"' in wf.text
+    assert "<zap:LaserMaxVolts>0</zap:LaserMaxVolts>" in wf.text
