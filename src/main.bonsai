@@ -258,7 +258,7 @@
                 <Property Name="GalvoYChannel" Selector="Zapit.GalvoYChannelPath" />
                 <Property Name="LaserChannel" Selector="Zapit.LaserChannelPath" />
                 <Property Name="LedChannel" Selector="Zapit.LedChannelPath" />
-                <Property Name="PhotodiodeChannel" Selector="Zapit.PhotodiodeTerminalPath" />
+                <Property Name="PhotodiodeChannel" Selector="Zapit.PhotodiodeChannelPath" />
                 <Property Name="SampleRate" Selector="Zapit.SampleRate" />
                 <Property Name="MaxTrialSeconds" Selector="Zapit.MaxTrialSeconds" />
                 <Property Name="EarlyStopLeadSeconds" Selector="Zapit.EarlyStopLeadSeconds" />
@@ -276,7 +276,7 @@
                 <zap:LaserChannel />
                 <zap:LedChannel />
                 <zap:PhotodiodeChannel />
-                <zap:PhotodiodeTerminal>Rse</zap:PhotodiodeTerminal>
+                <zap:PhotodiodeTerminalConfiguration>Rse</zap:PhotodiodeTerminalConfiguration>
                 <zap:TriggerTerminal />
                 <zap:SampleRate>100000</zap:SampleRate>
                 <zap:MaxTrialSeconds>3</zap:MaxTrialSeconds>

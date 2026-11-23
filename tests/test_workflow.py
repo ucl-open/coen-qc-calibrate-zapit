@@ -105,9 +105,9 @@ def test_the_raw_curve_file_name_is_the_one_in_the_readme():
 
 def test_the_wiring_is_read_from_the_rig_model_not_launch_properties(wf):
     # rig.yml's zapit block through RigConfigs: the camera's serial number and calibration .pfs, ZapitDaq's channels (full paths from
-    # the rig model) with the calibration photodiode's AI line as its photodiode channel.
+    # the rig model) with photodiodeChannel as its photodiode channel.
     for selector in ("Zapit.Camera.SerialNumber", "Zapit.Camera.CalibrationPfsPath", "Zapit.GalvoXChannelPath", "Zapit.GalvoYChannelPath",
                      "Zapit.LaserChannelPath", "Zapit.LedChannelPath", "Zapit.SampleRate", "Zapit.MaxTrialSeconds", "Zapit.EarlyStopLeadSeconds"):
         assert f'Selector="{selector}"' in wf.text
-    assert 'Name="PhotodiodeChannel" Selector="Zapit.PhotodiodeTerminalPath"' in wf.text
+    assert 'Name="PhotodiodeChannel" Selector="Zapit.PhotodiodeChannelPath"' in wf.text
     assert "zc:ZapitWiring" not in wf.text
