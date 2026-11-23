@@ -111,3 +111,9 @@ def test_the_wiring_is_read_from_the_rig_model_not_launch_properties(wf):
         assert f'Selector="{selector}"' in wf.text
     assert 'Name="PhotodiodeChannel" Selector="Zapit.PhotodiodeChannelPath"' in wf.text
     assert "zc:ZapitWiring" not in wf.text
+
+
+def test_the_dac_takes_the_rig_s_laser_ceiling(wf):
+    # ZapitDaq's hard layer: rig.yml's zapit.ceilingMw (0 disables the laser); a lost mapping leaves 0, never no ceiling.
+    assert 'Name="CeilingMw" Selector="Zapit.LaserCeilingMw"' in wf.text
+    assert "<zap:CeilingMw>0</zap:CeilingMw>" in wf.text

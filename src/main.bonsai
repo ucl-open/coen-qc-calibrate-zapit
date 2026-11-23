@@ -262,6 +262,7 @@
                 <Property Name="SampleRate" Selector="Zapit.SampleRate" />
                 <Property Name="MaxTrialSeconds" Selector="Zapit.MaxTrialSeconds" />
                 <Property Name="EarlyStopLeadSeconds" Selector="Zapit.EarlyStopLeadSeconds" />
+                <Property Name="CeilingMw" Selector="Zapit.LaserCeilingMw" />
               </PropertyMappings>
             </Expression>
             <Expression xsi:type="ExternalizedMapping">
@@ -281,6 +282,7 @@
                 <zap:SampleRate>100000</zap:SampleRate>
                 <zap:MaxTrialSeconds>3</zap:MaxTrialSeconds>
                 <zap:EarlyStopLeadSeconds>0.05</zap:EarlyStopLeadSeconds>
+                <zap:CeilingMw>0</zap:CeilingMw>
               </Combinator>
             </Expression>
             <Expression xsi:type="MemberSelector">
