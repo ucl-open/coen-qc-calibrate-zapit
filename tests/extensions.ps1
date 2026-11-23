@@ -1,4 +1,4 @@
-# Checks src\Extensions without the rig: ZapitWiring's settings (each channel as Device/channel, a missing one refused), the
+﻿# Checks src\Extensions without the rig: the
 # camera's settings file (a missing one refused), ZapitRequests (Point, Pattern, LaserOff and LaserCurve as ZapitDaq commands, and
 # every refusal: no test subject, over the ceiling, a bad number, a bad run), and the laser curve's raw file (one row per sample,
 # written whole, a ragged read refused).
@@ -24,20 +24,6 @@ function Obs($type, $items) {
 $wiring = [CoenQcCalibrateZapit.ZapitRequests]
 $request = [CoenQcCalibrateZapit.ZapitRequest]
 $command = [OpenRigs.Control.ControlEvent]
-
-# ZapitWiring: Device/channel for each line, the numbers through; a launch without them is refused.
-function New-Wiring() {
-    $w = New-Object CoenQcCalibrateZapit.ZapitWiring
-    $w.Device = 'Dev1'; $w.GalvoXChannel = 'ao0'; $w.GalvoYChannel = 'ao1'; $w.LaserChannel = 'ao2'; $w.LedChannel = 'ao3'; $w.PhotodiodeChannel = 'ai0'
-    $w
-}
-$s = (Items ([CoenQcCalibrateZapit.ZapitDaqSettings]) (New-Wiring).Process())[0]
-Check 'wiring: each channel as Device/channel' ("$($s.GalvoXChannel) $($s.GalvoYChannel) $($s.LaserChannel) $($s.LedChannel) $($s.PhotodiodeChannel)" -eq 'Dev1/ao0 Dev1/ao1 Dev1/ao2 Dev1/ao3 Dev1/ai0')
-Check 'wiring: the rate and limits through' ($s.SampleRate -eq 100000 -and $s.MaxTrialSeconds -gt 0 -and $s.EarlyStopLeadSeconds -gt 0)
-$none = New-Wiring; $none.Device = ''
-Check 'wiring: no device is refused' (Refused { Items ([CoenQcCalibrateZapit.ZapitDaqSettings]) $none.Process() })
-$sim = New-Object CoenQcCalibrateZapit.ZapitWiring; $sim.Simulated = $true
-Check 'wiring: the simulated twin needs no channel' ((Items ([CoenQcCalibrateZapit.ZapitDaqSettings]) $sim.Process())[0].Simulated)
 
 # The camera's settings file: found beside rig.yml, a missing one named.
 $rig = Join-Path ([IO.Path]::GetTempPath()) ("zapit-ext-" + [guid]::NewGuid().ToString('N'))

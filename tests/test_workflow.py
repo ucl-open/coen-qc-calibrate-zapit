@@ -9,9 +9,7 @@ from open_rigs.rigs import workflow_lint as lint
 ROOT = Path(__file__).parents[1]
 W, XSI = lint.W, lint.XSI
 COMMANDS = {"Point", "Pattern", "LaserOff", "LaserCurve", "Snapshot"}
-LAUNCH = {"ConfigRoot", "SubjectId", "SessionId", "LaunchId", "SerialNumber", "CalibrationPfs", "Simulated", "Device", "GalvoXChannel",
-          "GalvoYChannel", "LaserChannel", "LedChannel", "PhotodiodeChannel", "PhotodiodeTerminal", "SampleRate", "MaxTrialSeconds",
-          "EarlyStopLeadSeconds", "TestSubject", "LaserCeilingVolts", "SamplesPerLevel"}
+LAUNCH = {"ConfigRoot", "SubjectId", "SessionId", "LaunchId", "Simulated", "TestSubject", "LaserCeilingVolts", "SamplesPerLevel"}
 
 
 @pytest.fixture(scope="module")
@@ -92,7 +90,7 @@ def test_the_laser_is_fired_only_through_the_requests(wf):
     # Every command reaches ZapitDaq through ZapitRequests (the test-subject and ceiling checks): nothing else is its input.
     nodes, edges = lint.nodes_and_edges(next(n for n in lint.nodes_and_edges(lint.child(wf.root, W + "Workflow"))[0]
                                               if n.findtext(W + "Name") == "Calibration").find(W + "Workflow"))
-    (daq,) = [i for i, n in enumerate(nodes) if lint.kind(n) == "zap:ZapitDaq"]
+    (daq,) = [i for i, n in enumerate(nodes) if lint.kind(n) == "ozap:ZapitDaq"]
     feeders = [lint.kind(nodes[a]) for a, b, label in edges if b == daq and label == "Source1"]
     assert feeders == ["MemberSelector"]
     assert wf.text.count('xsi:type="zc:ZapitRequests"') == 1
@@ -103,3 +101,13 @@ def test_the_raw_curve_file_name_is_the_one_in_the_readme():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for name in ("staircase_volts.csv", "Zapit-LaserCurve.csv", "step,volts,reading"):
         assert name in code and name in readme
+
+
+def test_the_wiring_is_read_from_the_rig_model_not_launch_properties(wf):
+    # rig.yml's zapit block through RigConfigs: the camera's serial number and calibration .pfs, ZapitDaq's channels (full paths from
+    # the rig model) with the calibration photodiode's AI line as its photodiode channel.
+    for selector in ("Zapit.Camera.SerialNumber", "Zapit.Camera.CalibrationPfsPath", "Zapit.GalvoXChannelPath", "Zapit.GalvoYChannelPath",
+                     "Zapit.LaserChannelPath", "Zapit.LedChannelPath", "Zapit.SampleRate", "Zapit.MaxTrialSeconds", "Zapit.EarlyStopLeadSeconds"):
+        assert f'Selector="{selector}"' in wf.text
+    assert 'Name="PhotodiodeChannel" Selector="Zapit.PhotodiodeTerminalPath"' in wf.text
+    assert "zc:ZapitWiring" not in wf.text

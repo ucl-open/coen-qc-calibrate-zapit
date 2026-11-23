@@ -1,4 +1,4 @@
-using Bonsai;
+﻿using Bonsai;
 using OpenRigs.Control;
 using OpenRigs.Zapit;
 using System;
@@ -10,106 +10,11 @@ using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
 
-// The Zapit calibration's plumbing (Bonsai measures, app-rig-control computes): the rig's wiring as ZapitDaq's settings,
-// the camera's settings file, the commands a person or app-rig-control sends as ZapitDaq commands, and the laser curve's
+// The Zapit calibration's plumbing (Bonsai measures, app-rig-control computes): the camera's settings file, the commands a person or app-rig-control sends as ZapitDaq commands, and the laser curve's
 // raw file. No maths here: every volts value is lib_zapit's, computed by app-rig-control and sent as text. This code only
 // reads it, refuses what is out of range or not allowed, and files what the DAQ read. Compiled by Bonsai under C# 5.
 namespace CoenQcCalibrateZapit
 {
-    /// <summary>ZapitDaq's settings, member for member, with each channel as the full path ZapitDaq takes (Dev1/ao0).</summary>
-    public class ZapitDaqSettings
-    {
-        public bool Simulated { get; set; }
-        public string GalvoXChannel { get; set; }
-        public string GalvoYChannel { get; set; }
-        public string LaserChannel { get; set; }
-        public string LedChannel { get; set; }
-        public string PhotodiodeChannel { get; set; }
-        public ZapitInputTerminal PhotodiodeTerminal { get; set; }
-        public double SampleRate { get; set; }
-        public double MaxTrialSeconds { get; set; }
-        public double EarlyStopLeadSeconds { get; set; }
-    }
-
-    /// <summary>
-    /// The rig's zapit block as launch properties (app-rig-control passes each from rig.yml: the channels beside the device, as
-    /// rig.yml gives them) and ZapitDaq's settings from them, once. The launch carries them rather than this workflow reading
-    /// the block, so it runs on the lab's pinned open-rigs and before the release that has the block in its rig model.
-    /// </summary>
-    [Combinator]
-    [WorkflowElementCategory(ElementCategory.Source)]
-    [Description("The rig's Zapit wiring as ZapitDaq's settings, each channel as Device/channel.")]
-    public class ZapitWiring
-    {
-        public ZapitWiring()
-        {
-            SampleRate = 100000;
-            MaxTrialSeconds = 3;
-            EarlyStopLeadSeconds = 0.05;
-        }
-
-        [Description("Run the simulated twin instead of the NI DAQ (a desk, a test).")]
-        public bool Simulated { get; set; }
-
-        [Description("The NI device as NI MAX names it, such as Dev1.")]
-        public string Device { get; set; }
-
-        [Description("The AO line driving the X galvo, such as ao0.")]
-        public string GalvoXChannel { get; set; }
-
-        [Description("The AO line driving the Y galvo.")]
-        public string GalvoYChannel { get; set; }
-
-        [Description("The AO line driving the laser's control.")]
-        public string LaserChannel { get; set; }
-
-        [Description("The AO line driving the masking LED.")]
-        public string LedChannel { get; set; }
-
-        [Description("The AI line the photodiode is on, such as ai0.")]
-        public string PhotodiodeChannel { get; set; }
-
-        [Description("How the photodiode is wired.")]
-        public ZapitInputTerminal PhotodiodeTerminal { get; set; }
-
-        [Description("The AO sample rate, in samples per second (rig.yml's sampleRate).")]
-        public double SampleRate { get; set; }
-
-        [Description("rig.yml's maxTrialSeconds: ZapitDaq needs it above 0; a calibration does not use it.")]
-        public double MaxTrialSeconds { get; set; }
-
-        [Description("rig.yml's earlyStopLeadSeconds: ZapitDaq needs it above 0; a calibration does not use it.")]
-        public double EarlyStopLeadSeconds { get; set; }
-
-        public IObservable<ZapitDaqSettings> Process()
-        {
-            return Observable.Defer(delegate
-            {
-                if (!Simulated && (string.IsNullOrEmpty(Device) || string.IsNullOrEmpty(GalvoXChannel) || string.IsNullOrEmpty(GalvoYChannel)
-                    || string.IsNullOrEmpty(LaserChannel) || string.IsNullOrEmpty(LedChannel) || string.IsNullOrEmpty(PhotodiodeChannel)))
-                    throw new InvalidOperationException("The launch gave no Device or no channel: pass rig.yml's zapit device, galvoXChannel, galvoYChannel, laserChannel, ledChannel and photodiodeChannel.");
-                return Observable.Return(new ZapitDaqSettings
-                {
-                    Simulated = Simulated,
-                    GalvoXChannel = Full(GalvoXChannel),
-                    GalvoYChannel = Full(GalvoYChannel),
-                    LaserChannel = Full(LaserChannel),
-                    LedChannel = Full(LedChannel),
-                    PhotodiodeChannel = Full(PhotodiodeChannel),
-                    PhotodiodeTerminal = PhotodiodeTerminal,
-                    SampleRate = SampleRate,
-                    MaxTrialSeconds = MaxTrialSeconds,
-                    EarlyStopLeadSeconds = EarlyStopLeadSeconds,
-                });
-            });
-        }
-
-        string Full(string channel)
-        {
-            return string.IsNullOrEmpty(channel) ? "" : Device + "/" + channel;
-        }
-    }
-
     /// <summary>PylonCapture's SerialNumber and ParameterFile.</summary>
     public class ZapitCameraFile
     {
