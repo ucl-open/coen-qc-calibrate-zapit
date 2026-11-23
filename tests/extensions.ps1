@@ -74,6 +74,7 @@ Set-Content (Join-Path $run 'staircase_volts.csv') "volts`n0`n1`n2`n3`n4" -Encod
 $c = Send $r 'LaserCurve' 'zapit-laser/run1 0.1 -0.2'
 Check 'LaserCurve: a Staircase of the file''s volts parked at the galvos' ($c.Count -eq 1 -and $c[0].Command.Kind -eq 'Staircase' -and $c[0].Command.LaserLevelsVolts.Count -eq 5 -and $c[0].Command.SamplesPerLevel -eq 5 -and $c[0].Command.GalvoXVolts -eq 0.1 -and $c[0].Command.GalvoYVolts -eq -0.2 -and $c[0].Folder -eq $run)
 Check 'LaserCurve: the ceiling does not apply to the staircase' ($null -eq (Send (New-Requests $true 0.5) 'LaserCurve' 'zapit-laser/run1')[0].Refusal)
+Check 'LaserCurve: refused, not run, when the laser is disabled (ceiling 0 V)' ((Send (New-Requests $true 0) 'LaserCurve' 'zapit-laser/run1')[0].Refusal -match 'laser is disabled')
 Check 'LaserCurve: only with the test subject' ((Send (New-Requests $false) 'LaserCurve' 'zapit-laser/run1')[0].Refusal -match 'test subject')
 Check 'LaserCurve: a run outside the runs folder refused' ((Send $r 'LaserCurve' '..\other')[0].Refusal -match 'not a folder')
 Set-Content (Join-Path $run 'staircase_volts.csv') "volts`n0`n1`n11`n3" -Encoding ascii

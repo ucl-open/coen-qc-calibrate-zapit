@@ -74,7 +74,8 @@ namespace CoenQcCalibrateZapit
     ///                                  parked at x y (0 0 default); the photodiode's samples filed in the run folder
     ///   LaserOff                       every line to 0 V
     /// A laser above 0 V needs TestSubject, and a Point or Pattern laser must be at most LaserCeilingVolts (the ceiling
-    /// applied by lib_zapit, as volts); the staircase alone covers the laser's range, with the ceiling not applied.
+    /// applied by lib_zapit, as volts); the staircase alone covers the laser's range, with the ceiling not applied, and is
+    /// refused when LaserCeilingVolts is 0 (ceilingMw 0, the laser disabled), before ZapitDaq would stop the workflow.
     /// </summary>
     [Combinator]
     [WorkflowElementCategory(ElementCategory.Transform)]
@@ -202,6 +203,7 @@ namespace CoenQcCalibrateZapit
             if (parts.Length != 1 && parts.Length != 3)
                 return Refuse("LaserCurve takes the run's folder and optionally the galvos' X and Y volts, not '" + text + "'");
             if (!TestSubject) return Refuse("LaserCurve: the laser curve is run only with the test subject");
+            if (!(LaserCeilingVolts > 0)) return Refuse("LaserCurve: the laser is disabled (LaserCeilingVolts 0: rig.yml's zapit.ceilingMw is 0); set ceilingMw above 0 to run the laser curve");
             if (string.IsNullOrEmpty(RunsFolder)) return Refuse("LaserCurve: the runs folder is not known yet");
             var run = parts[0].Replace('/', '\\');
             if (run.Contains("..") || System.IO.Path.IsPathRooted(run))
