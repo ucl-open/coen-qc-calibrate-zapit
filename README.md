@@ -6,7 +6,7 @@ Run it from app-rig-control's Calibrations page. It is an open-rigs project unde
 
 **Not yet run on a rig.** It builds and every check that needs no hardware passes (ZapitDaq's simulated twin included); the NI DAQ, the Basler and the photodiode are for BLUE-OPTO-2.
 
-**Packages.** `OpenRigs.Devices`, `LiveView`, `Logging`, `Trials` and `Zapit` exist only as the branch builds `0.1.1-zapit-native.8` of lib-open-rigs (branch `zapit-native`, never released; its rig model has the `zapit` block), so `.bonsai\Bonsai.config` pins those versions and `local_packages\` carries their `.nupkg` files; the open-rigs pin is that branch's `9f1802a`. At cutover this repo is re-pinned to the released `coen-lab.N` (the lab's update-workflows does it), and the local copies go. The other lab packages stay on lib-open-rigs `a820afb`'s; never bump them here by hand.
+**Packages.** `OpenRigs.Devices`, `LiveView`, `Logging`, `Trials` and `Zapit` exist only as the branch builds `0.1.1-zapit-native.8` of lib-open-rigs (branch `zapit-native`, never released; its rig model has the `zapit` block), so `.bonsai\Bonsai.config` pins those versions and `local_packages\` carries their `.nupkg` files; the open-rigs pin is that branch's `b8ef7a1`. At cutover this repo is re-pinned to the released `coen-lab.N` (the lab's update-workflows does it), and the local copies go. The other lab packages stay on lib-open-rigs `a820afb`'s; never bump them here by hand.
 
 ## Bonsai Measures, app-rig-control Computes
 
