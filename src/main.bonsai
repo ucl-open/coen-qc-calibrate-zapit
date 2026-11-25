@@ -209,7 +209,6 @@
             </Expression>
             <Expression xsi:type="ExternalizedMapping">
               <Property Name="TestSubject" />
-              <Property Name="LaserCeilingVolts" />
               <Property Name="SamplesPerLevel" />
             </Expression>
             <Expression xsi:type="SubscribeSubject">
@@ -285,6 +284,7 @@
                 <zap:EarlyStopLeadSeconds>0.05</zap:EarlyStopLeadSeconds>
                 <zap:CeilingMw>0</zap:CeilingMw>
                 <zap:LaserMaxVolts>0</zap:LaserMaxVolts>
+                <zap:LaserCeilingVolts>0</zap:LaserCeilingVolts>
               </Combinator>
             </Expression>
             <Expression xsi:type="MemberSelector">
@@ -317,6 +317,9 @@
                 <orcl:Phase>Finished</orcl:Phase>
               </Combinator>
             </Expression>
+            <Expression xsi:type="ExternalizedMapping">
+              <Property Name="LaserCeilingVolts" />
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
@@ -345,6 +348,8 @@
             <Edge From="23" To="24" Label="Source1" />
             <Edge From="24" To="25" Label="Source1" />
             <Edge From="25" To="26" Label="Source1" />
+            <Edge From="27" To="6" Label="Source4" />
+            <Edge From="27" To="18" Label="Source4" />
           </Edges>
         </Workflow>
       </Expression>
@@ -432,9 +437,7 @@
       </Expression>
       <Expression xsi:type="lv:StreamDevices">
         <Name>LiveView</Name>
-        <Description>Streams the devices in this machine's rig.yml that the workflow publishes, over ZeroMQ, for app-rig-control's Calibrations page: data on TCP 5556, video on 5558, as in every lab workflow. Camera-Zapit.Data is streamed as Camera-Zapit.video once StreamDevices knows the device (a rig.yml camera entry, or a temporary Zapit instance in OpenRigs.LiveView as the balance camera has). Last, with nothing feeding it: it finds only subjects built before it.</Description>
-        <lv:ConfigRoot>C:\Coen-Lab-Local\RigConfigs</lv:ConfigRoot>
-        <lv:DataPort>5556</lv:DataPort>
+        <Description>Streams the devices in this machine's rig.yml that the workflow publishes, over ZeroMQ, for app-rig-control's Calibrations page: data on TCP 5556, video on 5558, as in every lab workflow. Camera-Zapit.Data is streamed as Camera-Zapit.video once StreamDevices knows the device (a rig.yml camera entry, or a temporary Zapit instance in OpenRigs.LiveView as the balance camera has). Last, with nothing feeding it: it finds only subjects built before it.</Description>        <lv:DataPort>5556</lv:DataPort>
         <lv:VideoPort>5558</lv:VideoPort>
       </Expression>
     </Nodes>
