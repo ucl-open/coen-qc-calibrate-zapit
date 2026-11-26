@@ -6,7 +6,7 @@ Run it from app-rig-control's Calibrations page. It is an open-rigs project unde
 
 **Not yet run on a rig.** It builds and every check that needs no hardware passes (ZapitDaq's simulated twin included); the NI DAQ, the Basler and the photodiode are for BLUE-OPTO-2.
 
-**Packages.** `.bonsai\Bonsai.config` pins the lab's `0.1.1-coen-lab.N` OpenRigs packages (Core `.46`, Devices `.73`, Logging `.37`, Trials `.25`, LiveView `.23`, Vision `.13`, Zapit `.1`) and `local_packages\` carries their `.nupkg` files; the open-rigs pin is lib-open-rigs `409810e`. The lab's update-workflows moves them; never bump them here by hand.
+**Packages.** `.bonsai\Bonsai.config` pins the lab's `0.1.1-coen-lab.N` OpenRigs packages (Core `.46`, Devices `.73`, Logging `.37`, Trials `.25`, LiveView `.23`, Vision `.13`, Zapit `.2`) and `local_packages\` carries their `.nupkg` files; the open-rigs pin is lib-open-rigs `409810e`. The lab's update-workflows moves them; never bump them here by hand.
 
 ## Bonsai Measures, app-rig-control Computes
 
