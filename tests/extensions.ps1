@@ -96,7 +96,7 @@ Check 'raw file: samples that do not divide into the steps refused, the file kep
 Set-Content (Join-Path $run 'staircase_volts.csv') "volts`n0`n1`n2`n3`n4" -Encoding ascii
 Remove-Item (Join-Path $run 'Zapit-LaserCurve.csv')
 $daq = New-Object OpenRigs.Zapit.ZapitDaq
-$daq.Simulated = $true; $daq.SampleRate = 100000; $daq.MaxTrialSeconds = 3; $daq.EarlyStopLeadSeconds = 0.05
+$daq.Simulated = $true; $daq.SampleRate = 100000; $daq.MaxTrialSeconds = 3
 $daq.CeilingMw = 20; $daq.LaserMaxVolts = 5   # rig.yml's, as main.bonsai maps them; the defaults (0) refuse any laser volts
 $sent = Send $r 'LaserCurve' 'zapit-laser/run1'
 $commands = Obs ([OpenRigs.Zapit.ZapitDaqCommand]) @($sent[0].Command)
