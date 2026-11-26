@@ -4,7 +4,7 @@
 
 ## OpenRigs.Core, OpenRigs.Devices, OpenRigs.Logging, OpenRigs.Streaming, OpenRigs.Video, OpenRigs.Zapit
 
-`local_packages/OpenRigs.Zapit.0.1.1-zapit-native.1.nupkg` is built from the lab's fork, [lib-open-rigs](https://github.com/Coen-Lab/lib-open-rigs), branch `zapit-native`, under the same licence as the other OpenRigs packages below.
+`local_packages/OpenRigs.*.0.1.1-coen-lab.N.nupkg` are built from the lab's fork, [lib-open-rigs](https://github.com/Coen-Lab/lib-open-rigs), under the same licence as the other OpenRigs packages below.
 
 `local_packages/OpenRigs.*.0.1.0-bbox.1.nupkg` are built from [open-rigs](https://github.com/open-rigs/open-rigs) at `3788bfbb0946bd5a8e5ade321da9815cc1ff1c07` with the two camera fixes that are commits on the lab's fork, [lib-open-rigs](https://github.com/Coen-Lab/lib-open-rigs) (see its `patches/README.md`). They are redistributed under the open-rigs BSD 3-Clause License:
 
